@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <title>Lucene Shinenigans</title>
+
+    <meta name="description" content="Lucene Shinenigans">
+    <meta name="author" content="Dmitriy Kolmogortsev">
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/white.css" id="theme">
+
+    <link rel="stylesheet" href="css/hljs/idea.css" id="highlight-theme">
+
+    <!-- Printing and PDF exports -->
+    <script>
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = window.location.search.match(/print-pdf/gi) ? 'css/print/pdf.css' : 'css/print/paper.css';
+        document.getElementsByTagName('head')[0].appendChild(link);
+    </script>
+
+    <!--[if lt IE 9]>
+        <script src="lib/js/html5shiv.js"></script>
+        <![endif]-->
+
+    <style>
+        .reveal .slide-number {
+            font-size: 22pt;
+            color: black;
+        }
+        
+        .reveal pre {
+            background: none;
+            border: none;
+            box-shadow: none;
+        }
+        
+        .reveal pre code {
+            color: black;
+            background: none;
+            box-shadow: none;
+            max-height: none;
+        }
+        /* .reveal section img {
+            border: none;
+            box-shadow: none;
+        }*/
+        
+        .reveal pre code {
+            overflow: hidden;
+        }
+        
+        .reveal .footer {
+            font-size: 22pt;
+            position: absolute;
+            left: 35%;
+            bottom: 0.5em;
+        }
+
+        .corp-name {
+            color: orangered;
+            font-family: "Circe", sans-serif;;
+        }
+        
+        .red-text {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    
+    <div class="reveal">
+        <div class="footer">
+            <span class="corp-name"><b>NAUMEN</b></span> Колмогорцев Дмитрий
+        </div>
+        <!-- Any section element inside of this container is displayed as a slide -->
+        <div class="slides">
+            <section>
+                <h2>Спасти поиск в приложении и не сойти с ума</h2>
+                <p>
+                    <small>
+                        Колмогорцев Дмитрий / <a href="mailto:dkolmogortsev@naumen.ru">dkolmogortsev@naumen.ru</a>
+                        <br/>
+                        <br/>
+                        </small>
+                </p>
+            </section>
+            <section>
+                <h2>Safe Harbor</h2>
+                <p class="red-text">User experience may vary</p>
+            </section>
+            <section>
+                <h2>О чем поговорим</h2>
+                <ul>
+                    <li>Как все работало до всего того, о чем я расскажу</li>
+                    <li>Как одна маленькая задача привела к множеству изменений</li>
+                    <li>Как ускорили и как с этим дальше жить</li>
+                </ul>
+            </section>
+            <section data-background="img/indexation-jms.png" data-background-size="55%" data-background-transition="zoom"></section>
+            <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
+            <section>
+                    <h2>Проблема: бесконечая переиндексация</h2>
+                    <pre>
+                            <code data-trim data-noescape class="java">
+                                onMessage(Message msg) {
+                                    try {
+                                        //doIndexation
+                                        //throw new Exception("whatever reason")
+                                    }
+                                    catch(Exception e) {
+                                        jmsTemplate.send(destination, msg)
+                                    }
+                                }
+                            </code>
+                        </pre>
+            </section>
+            <section>
+                <div>
+                    <p>
+                        Очередь индексации будет постоянно расти, и ничего проиндексировано не будет
+                    </p>
+                </div>
+                <div class="fragment">
+                    <p>
+                        <b>Решение</b><br>
+                        Ограничить кол-во попыток индексации
+                    </p>
+                </div>
+            </section>
+            <section>
+                    <h2>Решение:</h2>
+                    <pre>
+                            <code data-trim data-noescape class="java">
+                                onMessage(Message msg) {
+                                    Set&lt;String&gt; failedIds = new HashSet&lt;&gt;();
+                                    msg.getIds().forEach { id ->
+                                        try {
+                                            //index id with timeout
+                                        }
+                                        catch (Exception e){
+                                            failedIds.add(id)
+                                        }
+                                    }
+                                    var toDlq = failedIds.stream()
+                                                         .filer({фильтр попыток})
+                                                         .collect(toSet);
+                                    if(!toDlq.isEmpty()) {
+                                        //send to Dead Letter Queue
+                                    }                                                                        
+                                }
+                            </code>
+                        </pre>
+            </section>
+            <section>
+                <div>
+                    Прекрасно работающее решение, открывающее новые...<span class="fragment"> проблемы </span>
+                </div>
+            </section>
+            <section>
+                    <h4>Индексация содержимого файла</h4>
+                    <pre>
+                            <code data-trim data-noescape class="java">
+                                    "Thread-15" #335 daemon prio=5 os_prio=0....
+                                    java.lang.Thread.State: RUNNABLE
+                                        at org.apache.tika.sax.ContentHandlerDecorator.ignorableWhitespace
+                                        ...
+                                        at org.apache.tika.Tika.parseToString(Tika.java:496)
+                                        at org.apache.tika.Tika.parseToString(Tika.java:571)
+                                        at ExtractFileContentsFunction.apply(...)
+                                        at ExtractFileContentsFunction.apply(...)
+                                        at com.google.common.collect.Iterators$8.transform(...)
+                                        at com.google.common.collect.TransformedIterator.next(...)
+                                        at StringUtilities.join(StringUtilities.java:600)
+                                        at StringUtilities.join(StringUtilities.java:572)
+                                        at StringUtilities.join(StringUtilities.java:540)
+                                        at LuceneDocumentBuilder.addExtendedField(...)
+                                        at LuceneDocumentBuilder.addExtendedFields(...)
+                                        at LuceneDocumentBuilder.buildDocument(...)
+                                        ...
+                            </code>
+                        </pre>
+            </section>
+            <section>
+                <div>
+                    <p>
+                        <b>Проблема:</b><br>
+                        Поток индексации один, транзакция для одного объекта коротка, чтение содержимого занимает время куда большее чем таймаут транзакции
+                    </p>
+                </div>
+                <div class="fragment">
+                    <p>
+                        <b>Решение:</b><br>
+                        Индексировать файлы отдельно от всего остального
+                    </p>
+                </div>
+            </section>
+            <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
+
+            </section>
+            <section>
+                <h2>Ускорение поиска</h2>
+                <div>
+                    Со временем рост индекс разрастается на гигабайты
+                </div>
+                
+            </section>
+            <section>
+                <img src="img/infinispan.png" style="border: none"/>
+                <h3>Infinispan Directory</h3>
+            </section>
+            <section>
+                <h3>Infinispan Directory</h3>
+                <div>
+                    Мимикрирует под файловую систему<br>
+                    Строится на 3-х кешах:
+                <ol>
+                    <li class="fragment">Metadata Cache - Описание данных </li>
+                    <li class="fragment">Chunks Cache - Данные </li>
+                    <li class="fragment">Locks Cache - Блокировки файлов</li>
+                </ol>
+                </div>
+            </section>
+            <section>
+                <h2>Metadata Cache</h2>
+                <div>
+                    Хранит в себе описание файла<br>
+                    <ol>
+                        <li>Имя файла</li>
+                        <li>Размер буфера(чанка)</li>
+                    </ol>
+                </div>
+                
+            </section>
+            <section>
+                    <h2>Metadata Cache</h2>
+                    <div>
+                            <b>Требования</b>
+                            <ul>
+                                <li>Не должно быть настроено lifespan (время жизни)</li>
+                                <li>Не должно быть настроено maxIdleTime</li>
+                            </ul>
+                            <span class="fragment">Чтобы ничего не потерять настроено сохранение данных в БД</span>
+                        </div>
+            </section>
+            <section>
+                <h2>Chunk Cache</h2>
+                <div>
+                    Хранит сами файлы в виде чанков
+                    Сохранение в БД
+                </div>
+            </section>
+            <section data-background="img/indexation.png" data-background-size="55%" data-background-transition="zoom"> 
+
+            </section>
+            <section data-background="img/loading.png" data-background-size="55%" data-background-transition="zoom"> 
+                
+            </section>
+            <section data-transition="zoom">
+                <h2>Profit!</h2>
+            </section>
+            <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
+            <section>
+                <h2>Первые проблемы</h2>
+                <p>
+                    ${Представьте, что здесь изображена потеря связи до БД}
+                </p>
+            </section>
+            <section>
+                <code data-trim class="java red-text">FileNotFoundException: error loading metadata for ${filename}</code><br><br>
+                <p class="fragment">Каждую секунду! Каждую секунду, Карл</p>
+                <p class="fragment">Индексация не работает!</p>
+                <p class="fragment">Поиск не работает!</p>
+                <p class="fragment">Все пропало!</p>
+
+            </section>
+            <section>
+                <h2>Будем резервировать индекс!</h2>
+                <ul>
+                    <li class="fragment">Файловая система: Сохранение всех файлов индекса в архиве рядом с рабочими файлами</li>
+                    <li class="fragment">Infinispan: Копирование таблиц с индексом <b class="fragment red-text">SPOILER: просто так оно не работает</b></li>
+                </ul>
+            </section>
+            <section>
+                <p>Вопросы на данный момент</p>
+                <ul>
+                    <li class="fragment">Как проходит запись в БД?</li>
+                    <li class="fragment">Почему при любой проблеме индекс ломается?</li>
+                    <li class="fragment">Почему восстановление таблиц индекса не приводит к успеху?</li>
+                </ul>
+            </section>
+            <section data-background="img/pepe.png" data-background-transition="zoom" data-background-size="50%"> 
+                
+            </section>
+            <section>
+                <p>Как происходит запись в БД</p>
+                <ul>
+                    <li class="fragment">Каждый кеш - своя настройка синхронизации с БД</li>
+                    <li class="fragment">На каждое изменение - новое соединие</li>
+                    <li class="fragment">Не атомарно - проблема</li>
+                </ul>
+            </section>
+            <section>
+                <h4>Пишем за один раз</h4>
+                <ul>
+                    <li class="fragment">Metadata cache + Chunks cache = Index Cache</li>
+                    <li class="fragment">Включаем транзакционность</li>
+                    <li class="fragment">Собственный перехватчик комманд, который сливает все изменения в рамках одной транзакции</li>
+                    <li class="fragment">Custom LRU eviction for Index Cache (наткнулись на баг в Java)</li>
+                </ul>
+            </section>
+            <section>
+                <h3>Почему индекс сразу ломается?</h3>
+                <div class="fragment">
+                    <p>После предыдущих манипуляций получилось как-то так:</p>
+                    <pre>
+                        <code data-trim data-noescape class="java">
+                            {
+                                try(IndexWriter iw = getWriter()){
+                                    ...
+                                    txAction(() -> {
+                                        iw.commit();
+                                    });
+                                }
+                                ...
+                            }
+                        </code>
+                    </pre>
+                </div>
+            </section>
+
+            <section>
+                <h3>Разберем что происходит</h3>
+                <div>
+                    <pre>
+                        <code data-trim data-noescape class="java">
+                            getWriter() {
+                                ...
+                                IndexWriterConfig indexConfig = new IndexWriterConfig()
+                                //indexConfig.getPolicy().getClass().equals(KeepOnlyLastCommitDeletionPolicy.class)
+                                return new IndexWriter(directory, indexConfig)
+                            } 
+                        </code>
+                    </pre>
+                </div>
+            </section>
+            <section>
+                <h4>
+                    KeepOnlyLastCommitDeletionPolicy
+                </h4>
+                <pre>
+                        <code data-trim data-noescape class="java">
+                            public class KeepOnlyLastCommitDeletionPolicy 
+                                   extends IndexDeletionPolicy {
+                                ...
+                                @Override
+                                public void onInit(List&lt;? extends IndexCommit&gt; commits)
+                                {
+                                  onCommit(commits);
+                                }
+                                
+                                @Override
+                                public void onCommit(List&lt;? extends IndexCommit&gt; commits)
+                                {
+                                  int size = commits.size();
+                                  for(int i=0;i&lt;size-1;i++) {
+                                    commits.get(i).delete();
+                                  }
+                                }
+                              }
+                            </code>
+                    </pre>
+            </section>
+            <section>
+                <h3>Разберем что происходит</h3>
+                <div>
+                    <pre>
+                        <code class="java" data-noescape>
+                    txAction(() -> {
+                        iw.commit();
+                    });
+                        </code>
+                    </pre>
+                    <div>
+                        Все коммиты кроме последнего будут удалены
+                    </div>
+                </div>
+            </section>
+            <section>
+                <div>
+                    Транзакционность кеша
+                </div>
+                <pre>
+                        <code class="java" data-noescape>
+                    InfinispanTxSync
+                    {
+                        afterCompletion(int status){
+                            ...
+                            cache.prepare()
+                            ...
+                            cache.commit()//Уточнить вот этот
+                        }
+                    }
+                        </code>
+                    </pre>
+                <div>
+                    Что же может пойти не так? <b class="fragment red-text"> ВСЁ</b><br>
+                    <span class="fragment">и мы об этом никогда не узнаем =(</span>
+                </div>
+            </section>
+            <section>
+                <h2>Сюрприз в TransactionManager</h2>
+                <pre>
+                    <code data-trim class="java">
+                            try
+                            {
+                                _theSynch.afterCompletion(s);
+                
+                                return true;
+                            }
+                            catch (Exception e)
+                            {
+                                jtaLogger.i18NLogger.warn_resources_arjunacore...
+                
+                                return false; // should not cause any affect!
+                            }
+
+                    </code>
+                </pre>
+            </section>
+            <section>
+                <h2>Что делать, товарищи?</h2>
+                <ol>
+                    <li class="fragment">Учиться хранить не только последний коммит</li>
+                    <li class="fragment">Учиться следить за транзакциями в кеше</li>
+                </ol>
+            </section>
+            <section>
+                <h3>
+                    Научились
+                </h3>
+                <pre>
+                    <code class="java" data-trim>
+                        {
+                            indexCachemonitor.start();
+                            runInTx(() -> {
+                                try(IndexWriter iw = getWriter(${n-1 commit policy})){
+                                    ...
+                                    iw.commt();
+                                }
+                            }
+                            if(indexCachemonitor.isTransactionFailed()){
+                                rollBackComponent.rollBack()
+                            }
+                        }
+                    </code>
+                </pre>
+            </section>
+            <section>
+                <h3>indexCachemonitor</h3>
+                <pre>
+                    <code style="font-size: 80%"class="java" data-trim>
+                        public class IndexCacheMonitor
+                        {
+                            @Listener
+                            private static final class IndexCacheListener
+                            {                       
+                                @TransactionCompleted
+                                public void txComplete(
+                                    TransactionCompletedEvent&lt?, ?&gt transactionEvent
+                                ) 
+                                { ... }
+                            }
+                    
+                            public boolean isTransactionFailed() { ... }
+                            
+                            public void start() { indexCache.addListener(CACHE_LISTENER); }
+                            public void stop() { indexCache.removeListener(CACHE_LISTENER); }
+                        }
+                    </code>
+                </pre>
+            </section>
+            <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
+            <section>
+                <h3>Now what?</h3>
+                <div class="fragment">
+                    <p>Проблемы еще есть, и они постепенно решаются</p>
+                    <img src="img/problems.png" height="400">
+                </div>
+            </section>
+            <section>
+                <h3>Q & A</h3>
+            </section>
+        </div>
+    </div>
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.js"></script>
+
+    <script>
+        // Full list of configuration options available at:
+        // https://github.com/hakimel/reveal.js#configuration
+        Reveal.initialize({
+            controls: false,
+            progress: true,
+            history: true,
+            center: true,
+            slideNumber: true,
+
+            transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+            // Optional reveal.js plugins
+            dependencies: [{
+                src: 'lib/js/classList.js',
+                condition: function() {
+                    return !document.body.classList;
+                }
+            }, {
+                src: 'plugin/markdown/marked.js',
+                condition: function() {
+                    return !!document.querySelector('[data-markdown]');
+                }
+            }, {
+                src: 'plugin/markdown/markdown.js',
+                condition: function() {
+                    return !!document.querySelector('[data-markdown]');
+                }
+            }, {
+                src: 'plugin/highlight/highlight.js',
+                async: true,
+                condition: function() {
+                    return !!document.querySelector('pre code');
+                },
+                callback: function() {
+                    hljs.initHighlightingOnLoad();
+                }
+            }, {
+                src: 'plugin/zoom-js/zoom.js',
+                async: true
+            }, {
+                src: 'plugin/notes/notes.js',
+                async: true
+            }]
+        });
+    </script>
+
+</body>
+
+</html>
