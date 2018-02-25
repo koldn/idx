@@ -74,6 +74,15 @@
         .red-text {
             color: red;
         }
+        .reveal table {
+            font-size: 75%;
+        }
+        .reveal table td {
+            vertical-align: middle;
+            border-bottom: none;
+            word-break: keep-all;
+            word-wrap: break-word;
+        }
     </style>
 </head>
 
@@ -107,6 +116,7 @@
                     <li>Как ускорили и как с этим дальше жить</li>
                 </ul>
             </section>
+            <section data-background="img/lucene.png" data-background-size="55%" data-background-transition="zoom"></section>
             <section data-background="img/indexation-jms.png" data-background-size="55%" data-background-transition="zoom"></section>
             <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
             <section>
@@ -116,9 +126,10 @@
                                 onMessage(Message msg) {
                                     try {
                                         //doIndexation
-                                        //throw new Exception("whatever reason")
                                     }
                                     catch(Exception e) {
+                                        //e == ObjectNotFoundException
+                                        //e == LockObtainFailedException
                                         jmsTemplate.send(destination, msg)
                                     }
                                 }
@@ -143,19 +154,10 @@
                     <pre>
                             <code data-trim data-noescape class="java">
                                 onMessage(Message msg) {
-                                    Set&lt;String&gt; failedIds = new HashSet&lt;&gt;();
-                                    msg.getIds().forEach { id ->
-                                        try {
-                                            //index id with timeout
-                                        }
-                                        catch (Exception e){
-                                            failedIds.add(id)
-                                        }
-                                    }
-                                    var toDlq = failedIds.stream()
-                                                         .filer({фильтр попыток})
-                                                         .collect(toSet);
-                                    if(!toDlq.isEmpty()) {
+                                    tryToIndex()
+                                    Collection dlqIds = collectDqlIds()
+                                    
+                                    if(!dlqIds.isEmpty()) {
                                         //send to Dead Letter Queue
                                     }                                                                        
                                 }
@@ -207,6 +209,17 @@
             </section>
             <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
 
+            <section>
+                <h3> Lucene deep dive </h3>
+            </section>
+            <section>
+                <p>Основные абстракции:</p>
+                <ul>
+                    <li>Directory</li>
+                    <li>IndexWriter</li>
+                    <li>IndexReader</li>
+                </ul>
+                
             </section>
             <section>
                 <h2>Ускорение поиска</h2>
@@ -245,12 +258,14 @@
             <section>
                     <h2>Metadata Cache</h2>
                     <div>
-                            <b>Требования</b>
+                            <b>Требования</b><br>
                             <ul>
-                                <li>Не должно быть настроено lifespan (время жизни)</li>
-                                <li>Не должно быть настроено maxIdleTime</li>
-                            </ul>
-                            <span class="fragment">Чтобы ничего не потерять настроено сохранение данных в БД</span>
+                                <li>Всё должно быть сохранено</li>
+                                <li>maxEntries = -1</li>
+                                <li>lifespan = -1</li>
+                                <li>maxIdleTime = -1</li>
+                            </ul><br>
+                            <p class="fragment">Кроме этого сохраним всё в БД</p>
                         </div>
             </section>
             <section>
@@ -278,6 +293,11 @@
             </section>
             <section>
                 <code data-trim class="java red-text">FileNotFoundException: error loading metadata for ${filename}</code><br><br>
+                <p >Stack here</p>
+
+            </section>
+            <section>
+                <code data-trim class="java red-text">FileNotFoundException: error loading metadata for ${filename}</code><br><br>
                 <p class="fragment">Каждую секунду! Каждую секунду, Карл</p>
                 <p class="fragment">Индексация не работает!</p>
                 <p class="fragment">Поиск не работает!</p>
@@ -291,6 +311,11 @@
                     <li class="fragment">Infinispan: Копирование таблиц с индексом <b class="fragment red-text">SPOILER: просто так оно не работает</b></li>
                 </ul>
             </section>
+            <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
+            <section>
+                <p>Настало время разбираться что происходит</p>
+            </section>
+           
             <section>
                 <p>Вопросы на данный момент</p>
                 <ul>
@@ -299,7 +324,9 @@
                     <li class="fragment">Почему восстановление таблиц индекса не приводит к успеху?</li>
                 </ul>
             </section>
-            <section data-background="img/pepe.png" data-background-transition="zoom" data-background-size="50%"> 
+            <section  data-background-transition="zoom" data-background-size="50%">
+                <p>Наше состояние на начало разбирательств</p> 
+                <img src="img/pepe.png"/ style="border: none">
                 
             </section>
             <section>
@@ -316,7 +343,7 @@
                     <li class="fragment">Metadata cache + Chunks cache = Index Cache</li>
                     <li class="fragment">Включаем транзакционность</li>
                     <li class="fragment">Собственный перехватчик комманд, который сливает все изменения в рамках одной транзакции</li>
-                    <li class="fragment">Custom LRU eviction for Index Cache (наткнулись на баг в Java)</li>
+                    <li class="fragment">Custom LRU eviction for Index Cache (наткнулись на баг в Java <a href="https://bugs.openjdk.java.net/browse/JDK-8137184">JDK-8137184</a>)</li>
                 </ul>
             </section>
             <section>
@@ -347,7 +374,8 @@
                             getWriter() {
                                 ...
                                 IndexWriterConfig indexConfig = new IndexWriterConfig()
-                                //indexConfig.getPolicy().getClass().equals(KeepOnlyLastCommitDeletionPolicy.class)
+                                //indexConfig.getPolicy().getClass()
+                                //.equals(KeepOnlyLastCommitDeletionPolicy.class)
                                 return new IndexWriter(directory, indexConfig)
                             } 
                         </code>
@@ -355,9 +383,7 @@
                 </div>
             </section>
             <section>
-                <h4>
-                    KeepOnlyLastCommitDeletionPolicy
-                </h4>
+                <p>Политика по умолчанию</p>
                 <pre>
                         <code data-trim data-noescape class="java">
                             public class KeepOnlyLastCommitDeletionPolicy 
@@ -419,7 +445,7 @@
                 </div>
             </section>
             <section>
-                <h2>Сюрприз в TransactionManager</h2>
+                <p>Сюрприз в TransactionManager (Arjuna)</p>
                 <pre>
                     <code data-trim class="java">
                             try
@@ -496,6 +522,45 @@
                 <div class="fragment">
                     <p>Проблемы еще есть, и они постепенно решаются</p>
                     <img src="img/problems.png" height="400">
+                </div>
+            </section>
+            <section>
+                <h4>Итоги</h4>
+                <div>
+                <table>
+                    <tbody>
+                        <tr>
+                            <td style="width: 45%">Бесконечная индексация</td>
+                            <td style="width: 10%">-></td>
+                            <td style="width: 45%">Ограничить попытки</td>
+                        </tr>
+                        <tr class="fragment">
+                                <td>Индексация файлов</td>
+                                <td>-></td>
+                                <td>В отдельном потоке</td>
+                            </tr>
+                            <tr class="fragment">
+                                    <td>Рост индекса</td>
+                                    <td>-></td>
+                                    <td>Индекс в память!</td>
+                                </tr>
+                                <tr class="fragment">
+                                        <td>Разрыв соединения с БД</td>
+                                        <td>-></td>
+                                        <td>резервирование</td>
+                                    </tr>
+                                    <tr class="fragment">
+                                            <td>Не атомарная запись </td>
+                                            <td>-></td>
+                                            <td>атомарная запись</td>
+                                        </tr>
+                                        <tr class="fragment">
+                                                <td>Тайны ТМ </td>
+                                                <td>-></td>
+                                                <td>Слежка за транзакциями</td>
+                                            </tr>
+                    </tbody>
+                </table>
                 </div>
             </section>
             <section>
