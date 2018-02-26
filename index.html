@@ -117,7 +117,7 @@
                 </ul>
             </section>
             <section data-background="img/lucene.png" data-background-size="55%" data-background-transition="zoom"></section>
-            <section data-background="img/indexation-jms.png" data-background-size="55%" data-background-transition="zoom"></section>
+            <section data-background="img/indexation-jms.png" data-background-size="30%" data-background-transition="zoom"></section>
             <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
             <section>
                     <h2>Проблема: бесконечая переиндексация</h2>
@@ -166,13 +166,14 @@
             </section>
             <section>
                 <div>
-                    Прекрасно работающее решение, открывающее новые...<span class="fragment"> проблемы </span>
+                    Прекрасно работающее решение, открывающее новые...<span class="fragment"> проблемы с файлами</span>
                 </div>
             </section>
+            
             <section>
-                    <h4>Индексация содержимого файла</h4>
+                    <h4>Индексация файла ушла в себя</h4>
                     <pre>
-                            <code data-trim data-noescape class="java">
+                            <code data-trim data-noescape class="java" style="width: 150%">
                                     "Thread-15" #335 daemon prio=5 os_prio=0....
                                     java.lang.Thread.State: RUNNABLE
                                         at org.apache.tika.sax.ContentHandlerDecorator.ignorableWhitespace
@@ -193,6 +194,7 @@
                             </code>
                         </pre>
             </section>
+            
             <section>
                 <div>
                     <p>
@@ -207,26 +209,99 @@
                     </p>
                 </div>
             </section>
+            <section>
+                    <h3>Файл не получится индексировать</h3>
+                    <pre>
+                        <code data-trim data-noescape class="java" style="width: 150%">
+    java.lang.NoSuchMethodError: XMLSlideShow.getSlides()
+        at o.a.t.p.m.ooxml.XSLFPowerPointExtractorDecorator.buildXHTML(...)
+        at o.a.t.p.m.ooxml.AbstractOOXMLExtractor.getXHTML(...)
+        at o.a.t.p.m.ooxml.OOXMLExtractorFactory.parse(...)
+        at o.a.t.p.microsoft.ooxml.OOXMLParser.parse(...)
+        at o.a.t.p.CompositeParser.parse(CompositeParser.java:256)
+        at o.a.t.p.CompositeParser.parse(CompositeParser.java:256)
+        at o.a.t.p.AutoDetectParser.parse(AutoDetectParser.java:120)
+                        </code>
+                    </pre>
+                    <div>
+                        o.a.t.p = org.apache.tika.parser
+                    </div>
+                </section>
             <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
 
             <section>
                 <h3> Lucene deep dive </h3>
             </section>
             <section>
-                <p>Основные абстракции:</p>
+                <p>Основы:</p>
                 <ul>
-                    <li>Directory</li>
+                    <li>Document</li>
                     <li>IndexWriter</li>
-                    <li>IndexReader</li>
+                    <li>Directory</li>
                 </ul>
                 
             </section>
             <section>
+                <h4>Document</h4>
+                <ul>
+                    <li>Состоит из последовательности полей</li>
+                    <li>Поля - именованые последовательности терминов</li>
+                    <li>Термин - байты</li>
+                </ul>
+                <p>Термин - слово в предложении/дата/ссылка/email и прочее</p>
+            </section>
+            <section>
+                <h4>Document</h4>
+                <p>Все документы хранятся в сегментах</p>
+            </section>
+            <section>
+                <h4>Segment</h4>
+                <p>Сегмент состоит из нескольких файлов</p>
+                <ul>
+                    <li>.si - метаданные сегмента (сколько в нем документов, какие файлы используются)</li>
+                    <li>.doc - соответствие терминов документам</li>
+                    <li><a href="https://lucene.apache.org/core/7_2_1/core/org/apache/lucene/codecs/lucene70/package-summary.html#package.description">more here</a></li>
+                </ul>
+                <p>Описание сегментов хранится в файле segments_N</p>
+            </section>
+            <section>
+                <h3>segments_N</h3>
+                <p>
+                    Описание текущего коммита в индексе
+                </p>
+                <ul>
+                    <li>N - поколение индекса</li>
+                    <li>Хранит имя сегмента</li>
+                </ul>
+            </section>
+            <section>
+                Все файлы хранятся в виде блоков разного размера для лучшего сжатия
+            </section>
+            <section>
+                <h3>Directory</h3>
+                <p>
+                    Абстракция над файловой системой предоставляющая методы доступа к ней
+                </p>
+            </section>
+            <section>
+                <h3>Index_Writer</h3>
+                <p>
+                    Модифицирует индекс
+                </p>
+                <ul>
+                    <li>Может быть открыт только один (создает блокировку директории)</li>
+                    <li>Хранит все модификации индекса в памяти до commit()/rollback()</li>
+                    <li>При модификации индекса по необходимости вызывает слияние сегментов</li>
+                </ul>
+            </section>
+            <section>
                 <h2>Ускорение поиска</h2>
                 <div>
-                    Со временем рост индекс разрастается на гигабайты
+                    Индекс разрастается с течением времени до гигабайтов и поиск может начать тормозить
                 </div>
-                
+                <p>
+                    Поиск мог занимать минуты (3 минуты в нашем опыте)
+                </p>
             </section>
             <section>
                 <img src="img/infinispan.png" style="border: none"/>
@@ -283,6 +358,9 @@
             </section>
             <section data-transition="zoom">
                 <h2>Profit!</h2>
+                <p>
+                    3 min -> 200ms
+                </p>
             </section>
             <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
             <section>
@@ -313,11 +391,11 @@
             </section>
             <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
             <section>
-                <p>Настало время разбираться что происходит</p>
+                <p>Настало время разбираться с происходящим</p>
             </section>
            
             <section>
-                <p>Вопросы на данный момент</p>
+                <p>Вопросы на данный момент:</p>
                 <ul>
                     <li class="fragment">Как проходит запись в БД?</li>
                     <li class="fragment">Почему при любой проблеме индекс ломается?</li>
@@ -334,7 +412,7 @@
                 <ul>
                     <li class="fragment">Каждый кеш - своя настройка синхронизации с БД</li>
                     <li class="fragment">На каждое изменение - новое соединие</li>
-                    <li class="fragment">Не атомарно - проблема</li>
+                    <li class="fragment">Неатомарно - проблема</li>
                 </ul>
             </section>
             <section>
@@ -434,7 +512,7 @@
                             ...
                             cache.prepare()
                             ...
-                            cache.commit()//Уточнить вот этот
+                            cache.commit()
                         }
                     }
                         </code>
@@ -547,12 +625,12 @@
                                 <tr class="fragment">
                                         <td>Разрыв соединения с БД</td>
                                         <td>-></td>
-                                        <td>резервирование</td>
+                                        <td>Резервирование</td>
                                     </tr>
                                     <tr class="fragment">
-                                            <td>Не атомарная запись </td>
+                                            <td>Неатомарная запись </td>
                                             <td>-></td>
-                                            <td>атомарная запись</td>
+                                            <td>Атомарная запись</td>
                                         </tr>
                                         <tr class="fragment">
                                                 <td>Тайны ТМ </td>
