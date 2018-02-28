@@ -117,12 +117,25 @@
                 </ul>
             </section>
             <section data-background="img/lucene.png" data-background-size="55%" data-background-transition="zoom"></section>
+            <section>
+                <h4>Lucene Inside</h4>
+                <table>
+                    <tbody>
+                        <tr>
+                            <td><img src="img/solr.png"/ style="border: none"></td>
+                            <td><img src="img/elastic.png" style="border: none"/></td>
+                            <td><img src="img/cratedb.jpg" style="border: none"/></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
             <section data-background="img/indexation-jms.png" data-background-size="30%" data-background-transition="zoom"></section>
             <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
             <section>
                     <h2>Проблема: бесконечая переиндексация</h2>
                     <pre>
                             <code data-trim data-noescape class="java">
+                                //1 hour timeout
                                 onMessage(Message msg) {
                                     try {
                                         //doIndexation
@@ -224,7 +237,7 @@
                         </code>
                     </pre>
                     <div>
-                        o.a.t.p = org.apache.tika.parser
+                        o.a.t.p - org.apache.tika.parser
                     </div>
                 </section>
             <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
@@ -245,10 +258,10 @@
                 <h4>Document</h4>
                 <ul>
                     <li>Состоит из последовательности полей</li>
-                    <li>Поля - именованые последовательности терминов</li>
-                    <li>Термин - байты</li>
+                    <li>Поля - именованые последовательности term`ов</li>
+                    <li>Term - байты</li>
                 </ul>
-                <p>Термин - слово в предложении/дата/ссылка/email и прочее</p>
+                <p>Term - единица поиска( aka слово в предложении/дата/ссылка/email и прочее)</p>
             </section>
             <section>
                 <h4>Document</h4>
@@ -260,7 +273,7 @@
                 <ul>
                     <li>.si - метаданные сегмента (сколько в нем документов, какие файлы используются)</li>
                     <li>.doc - соответствие терминов документам</li>
-                    <li><a href="https://lucene.apache.org/core/7_2_1/core/org/apache/lucene/codecs/lucene70/package-summary.html#package.description">more here</a></li>
+                    <li><a href="https://lucene.apache.org/core/7_2_1/">https://lucene.apache.org/core/7_2_1/</a></li>
                 </ul>
                 <p>Описание сегментов хранится в файле segments_N</p>
             </section>
@@ -617,11 +630,6 @@
                                 <td>-></td>
                                 <td>В отдельном потоке</td>
                             </tr>
-                            <tr class="fragment">
-                                    <td>Рост индекса</td>
-                                    <td>-></td>
-                                    <td>Индекс в память!</td>
-                                </tr>
                                 <tr class="fragment">
                                         <td>Разрыв соединения с БД</td>
                                         <td>-></td>
