@@ -65,18 +65,21 @@
             left: 35%;
             bottom: 0.5em;
         }
-
+        
         .corp-name {
             color: orangered;
-            font-family: "Circe", sans-serif;;
+            font-family: "Circe", sans-serif;
+            ;
         }
         
         .red-text {
             color: red;
         }
+        
         .reveal table {
             font-size: 75%;
         }
+        
         .reveal table td {
             vertical-align: middle;
             border-bottom: none;
@@ -87,7 +90,7 @@
 </head>
 
 <body>
-    
+
     <div class="reveal">
         <div class="footer">
             <span class="corp-name"><b>NAUMEN</b></span> Колмогорцев Дмитрий
@@ -122,9 +125,9 @@
                 <table>
                     <tbody>
                         <tr>
-                            <td><img src="img/solr.png"/ style="border: none"></td>
-                            <td><img src="img/elastic.png" style="border: none"/></td>
-                            <td><img src="img/cratedb.jpg" style="border: none"/></td>
+                            <td><img src="img/solr.png" / style="border: none"></td>
+                            <td><img src="img/elastic.png" style="border: none" /></td>
+                            <td><img src="img/cratedb.jpg" style="border: none" /></td>
                         </tr>
                     </tbody>
                 </table>
@@ -132,8 +135,8 @@
             <section data-background="img/indexation-jms.png" data-background-size="30%" data-background-transition="zoom"></section>
             <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
             <section>
-                    <h2>Проблема: бесконечая переиндексация</h2>
-                    <pre>
+                <h2>Проблема: бесконечая переиндексация</h2>
+                <pre>
                             <code data-trim data-noescape class="java">
                                 //1 hour timeout
                                 onMessage(Message msg) {
@@ -157,14 +160,13 @@
                 </div>
                 <div class="fragment">
                     <p>
-                        <b>Решение</b><br>
-                        Ограничить кол-во попыток индексации
+                        <b>Решение</b><br> Ограничить кол-во попыток индексации
                     </p>
                 </div>
             </section>
             <section>
-                    <h2>Решение:</h2>
-                    <pre>
+                <h2>Решение:</h2>
+                <pre>
                             <code data-trim data-noescape class="java">
                                 onMessage(Message msg) {
                                     tryToIndex()
@@ -182,10 +184,10 @@
                     Прекрасно работающее решение, открывающее новые...<span class="fragment"> проблемы с файлами</span>
                 </div>
             </section>
-            
+
             <section>
-                    <h4>Индексация файла ушла в себя</h4>
-                    <pre>
+                <h4>Индексация файла ушла в себя</h4>
+                <pre>
                             <code data-trim data-noescape class="java" style="width: 150%">
                                     "Thread-15" #335 daemon prio=5 os_prio=0....
                                     java.lang.Thread.State: RUNNABLE
@@ -207,24 +209,22 @@
                             </code>
                         </pre>
             </section>
-            
+
             <section>
                 <div>
                     <p>
-                        <b>Проблема:</b><br>
-                        Поток индексации один, транзакция для одного объекта коротка, чтение содержимого занимает время куда большее чем таймаут транзакции
+                        <b>Проблема:</b><br> Поток индексации один, транзакция для одного объекта коротка, чтение содержимого занимает время куда большее чем таймаут транзакции
                     </p>
                 </div>
                 <div class="fragment">
                     <p>
-                        <b>Решение:</b><br>
-                        Индексировать файлы отдельно от всего остального
+                        <b>Решение:</b><br> Индексировать файлы отдельно от всего остального
                     </p>
                 </div>
             </section>
             <section>
-                    <h3>Файл не получится индексировать</h3>
-                    <pre>
+                <h3>Файл не получится индексировать</h3>
+                <pre>
                         <code data-trim data-noescape class="java" style="width: 150%">
     java.lang.NoSuchMethodError: XMLSlideShow.getSlides()
         at o.a.t.p.m.ooxml.XSLFPowerPointExtractorDecorator.buildXHTML(...)
@@ -236,10 +236,10 @@
         at o.a.t.p.AutoDetectParser.parse(AutoDetectParser.java:120)
                         </code>
                     </pre>
-                    <div>
-                        o.a.t.p - org.apache.tika.parser
-                    </div>
-                </section>
+                <div>
+                    o.a.t.p - org.apache.tika.parser
+                </div>
+            </section>
             <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
 
             <section>
@@ -252,7 +252,7 @@
                     <li>IndexWriter</li>
                     <li>Directory</li>
                 </ul>
-                
+
             </section>
             <section>
                 <h4>Document</h4>
@@ -317,19 +317,18 @@
                 </p>
             </section>
             <section>
-                <img src="img/infinispan.png" style="border: none"/>
+                <img src="img/infinispan.png" style="border: none" />
                 <h3>Infinispan Directory</h3>
             </section>
             <section>
                 <h3>Infinispan Directory</h3>
                 <div>
-                    Мимикрирует под файловую систему<br>
-                    Строится на 3-х кешах:
-                <ol>
-                    <li class="fragment">Metadata Cache - Описание данных </li>
-                    <li class="fragment">Chunks Cache - Данные </li>
-                    <li class="fragment">Locks Cache - Блокировки файлов</li>
-                </ol>
+                    Мимикрирует под файловую систему<br> Строится на 3-х кешах:
+                    <ol>
+                        <li class="fragment">Metadata Cache - Описание данных </li>
+                        <li class="fragment">Chunks Cache - Данные </li>
+                        <li class="fragment">Locks Cache - Блокировки файлов</li>
+                    </ol>
                 </div>
             </section>
             <section>
@@ -341,33 +340,32 @@
                         <li>Размер буфера(чанка)</li>
                     </ol>
                 </div>
-                
+
             </section>
             <section>
-                    <h2>Metadata Cache</h2>
-                    <div>
-                            <b>Требования</b><br>
-                            <ul>
-                                <li>Всё должно быть сохранено</li>
-                                <li>maxEntries = -1</li>
-                                <li>lifespan = -1</li>
-                                <li>maxIdleTime = -1</li>
-                            </ul><br>
-                            <p class="fragment">Кроме этого сохраним всё в БД</p>
-                        </div>
+                <h2>Metadata Cache</h2>
+                <div>
+                    <b>Требования</b><br>
+                    <ul>
+                        <li>Всё должно быть сохранено</li>
+                        <li>maxEntries = -1</li>
+                        <li>lifespan = -1</li>
+                        <li>maxIdleTime = -1</li>
+                    </ul><br>
+                    <p class="fragment">Кроме этого сохраним всё в БД</p>
+                </div>
             </section>
             <section>
                 <h2>Chunk Cache</h2>
                 <div>
-                    Хранит сами файлы в виде чанков
-                    Сохранение в БД
+                    Хранит сами файлы в виде чанков Сохранение в БД
                 </div>
             </section>
-            <section data-background="img/indexation.png" data-background-size="55%" data-background-transition="zoom"> 
+            <section data-background="img/indexation.png" data-background-size="55%" data-background-transition="zoom">
 
             </section>
-            <section data-background="img/loading.png" data-background-size="55%" data-background-transition="zoom"> 
-                
+            <section data-background="img/loading.png" data-background-size="55%" data-background-transition="zoom">
+
             </section>
             <section data-transition="zoom">
                 <h2>Profit!</h2>
@@ -383,12 +381,25 @@
                 </p>
             </section>
             <section>
-                <code data-trim class="java red-text">FileNotFoundException: error loading metadata for ${filename}</code><br><br>
-                <p >Stack here</p>
-
+                <code data-trim class="java red-text">FileNotFoundException: Error loading metadata for index file ${filename}</code>
+                <pre>
+                    <code data-trim class="java" style="width: 150%">
+Caused by: java.io.FileNotFoundException: Error loading ...
+    at o.i.l.i.DirectoryImplementor.openInput(...)
+    at o.i.l.i.DirectoryLuceneV4.openInput(...)
+    at o.a.l.i.SegmentInfos.read(...)
+    at o.a.l.i.StandardDirectoryReader$1.doBody(...)
+    at o.a.l.i.SegmentInfos$FindSegmentsFile.run(...)
+    at o.a.l.i.StandardDirectoryReader.open(...)
+    at o.a.l.i.DirectoryReader.open(...)
+                    </code>
+                </pre>
+                <p>
+                    o.i.l.i - org.infinispan.lucene.impl <br> o.a.l.i - org.apache.lucene.index
+                </p>
             </section>
             <section>
-                <code data-trim class="java red-text">FileNotFoundException: error loading metadata for ${filename}</code><br><br>
+                <code data-trim class="java red-text">FileNotFoundException: Error loading metadata for index file ${filename}</code><br><br>
                 <p class="fragment">Каждую секунду! Каждую секунду, Карл</p>
                 <p class="fragment">Индексация не работает!</p>
                 <p class="fragment">Поиск не работает!</p>
@@ -406,7 +417,7 @@
             <section>
                 <p>Настало время разбираться с происходящим</p>
             </section>
-           
+
             <section>
                 <p>Вопросы на данный момент:</p>
                 <ul>
@@ -415,10 +426,10 @@
                     <li class="fragment">Почему восстановление таблиц индекса не приводит к успеху?</li>
                 </ul>
             </section>
-            <section  data-background-transition="zoom" data-background-size="50%">
-                <p>Наше состояние на начало разбирательств</p> 
-                <img src="img/pepe.png"/ style="border: none">
-                
+            <section data-background-transition="zoom" data-background-size="50%">
+                <p>Наше состояние на начало разбирательств</p>
+                <img src="img/pepe.png" / style="border: none">
+
             </section>
             <section>
                 <p>Как происходит запись в БД</p>
@@ -618,35 +629,35 @@
             <section>
                 <h4>Итоги</h4>
                 <div>
-                <table>
-                    <tbody>
-                        <tr>
-                            <td style="width: 45%">Бесконечная индексация</td>
-                            <td style="width: 10%">-></td>
-                            <td style="width: 45%">Ограничить попытки</td>
-                        </tr>
-                        <tr class="fragment">
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td style="width: 45%">Бесконечная индексация</td>
+                                <td style="width: 10%">-></td>
+                                <td style="width: 45%">Ограничить попытки</td>
+                            </tr>
+                            <tr class="fragment">
                                 <td>Индексация файлов</td>
                                 <td>-></td>
                                 <td>В отдельном потоке</td>
                             </tr>
-                                <tr class="fragment">
-                                        <td>Разрыв соединения с БД</td>
-                                        <td>-></td>
-                                        <td>Резервирование</td>
-                                    </tr>
-                                    <tr class="fragment">
-                                            <td>Неатомарная запись </td>
-                                            <td>-></td>
-                                            <td>Атомарная запись</td>
-                                        </tr>
-                                        <tr class="fragment">
-                                                <td>Тайны ТМ </td>
-                                                <td>-></td>
-                                                <td>Слежка за транзакциями</td>
-                                            </tr>
-                    </tbody>
-                </table>
+                            <tr class="fragment">
+                                <td>Разрыв соединения с БД</td>
+                                <td>-></td>
+                                <td>Резервирование</td>
+                            </tr>
+                            <tr class="fragment">
+                                <td>Неатомарная запись </td>
+                                <td>-></td>
+                                <td>Атомарная запись</td>
+                            </tr>
+                            <tr class="fragment">
+                                <td>Тайны ТМ </td>
+                                <td>-></td>
+                                <td>Слежка за транзакциями</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </section>
             <section>
