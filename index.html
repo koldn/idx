@@ -132,20 +132,30 @@
                     </tbody>
                 </table>
             </section>
-            <section data-background="img/indexation-jms.png" data-background-size="30%" data-background-transition="zoom"></section>
+            <section>
+                <p>Но ведь есть ${productName}!! Зачем оно вам?!</p>
+                <p class="fragment">Поиск - <span class="red-text"><b>business critical</b></span> фича для нас, мы должны мочь контролировать всё <span class="red-text"><b>сами</b></span></p>
+            </section>
+            <section>
+                <h4>Что индексируем?</h4>
+                <p class="fragment">Всё <span class="fragment">( при желании )</span></p>
+                <p class="fragment">Атрибуты объектов системы</p>
+                <p class="fragment">Файлы, связанные с объектами</p>
+            </section>
+            <section data-background="img/indexation-jms.png" data-background-size="35%" data-background-transition="zoom"></section>
             <section data-background="img/unicorn.gif" data-background-transition="zoom"></section>
             <section>
                 <h2>Проблема: бесконечая переиндексация</h2>
                 <pre>
                             <code data-trim data-noescape class="java">
-                                //1 hour timeout
+                                //1 hour tx timeout
                                 onMessage(Message msg) {
                                     try {
                                         //doIndexation
                                     }
                                     catch(Exception e) {
-                                        //e == ObjectNotFoundException
-                                        //e == LockObtainFailedException
+                                        //e instanceof ObjectNotFoundException
+                                        //e instanceof LockObtainFailedException
                                         jmsTemplate.send(destination, msg)
                                     }
                                 }
