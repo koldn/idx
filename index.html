@@ -137,6 +137,10 @@
                 <p class="fragment">Поиск - <span class="red-text"><b>business critical</b></span> фича для нас, мы должны мочь контролировать всё <span class="red-text"><b>сами</b></span></p>
             </section>
             <section>
+                <h3>Зачем</h3>
+                <img src="img/scwf.png" style="border: none"/>
+            </section>
+            <section>
                 <h4>Что индексируем?</h4>
                 <p class="fragment">Всё <span class="fragment">( при желании )</span></p>
                 <p class="fragment">Атрибуты объектов системы</p>
@@ -454,7 +458,7 @@ Caused by: java.io.FileNotFoundException: Error loading ...
                 <ul>
                     <li class="fragment">Metadata cache + Chunks cache = Index Cache</li>
                     <li class="fragment">Включаем транзакционность</li>
-                    <li class="fragment">Собственный перехватчик комманд, который сливает все изменения в рамках одной транзакции</li>
+                    <li class="fragment">Собственный перехватчик команд, который сливает все изменения в рамках одной транзакции</li>
                     <li class="fragment">Custom LRU eviction for Index Cache (наткнулись на баг в Java <a href="https://bugs.openjdk.java.net/browse/JDK-8137184">JDK-8137184</a>)</li>
                 </ul>
             </section>
@@ -594,7 +598,7 @@ Caused by: java.io.FileNotFoundException: Error loading ...
                             runInTx(() -> {
                                 try(IndexWriter iw = getWriter(${n-1 commit policy})){
                                     ...
-                                    iw.commt();
+                                    iw.commit();
                                 }
                             }
                             if(indexCachemonitor.isTransactionFailed()){
